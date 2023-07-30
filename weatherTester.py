@@ -18,6 +18,10 @@ DARKBLUE = (0, 15, 48)
 
 TIMEOUT = 10
 
+#### DISABLES FLASHING IMAGES ####
+DISABLELIGHTNING = False
+##################################
+
 
 # Resize an image maintaining aspect ratio
 def smartResize(surface, newSize, smooth=False):
@@ -48,7 +52,7 @@ class App:
         
         self.weather = WeatherManager(self.screen)
 
-        self.weather.setWeather("snow")
+        self.weather.setWeather("storm")
 
         self.debugWeatherIndex = -1
         self.debugWeatherCodes = ["sunny", "partly-sunny",
@@ -68,7 +72,7 @@ class App:
                         self.running = False
                     
                     if event.key == pygame.K_SPACE:
-                        self.weather.setWeather(random.choice(["clear", "mostly-clear"]))
+                        self.weather.setWeather(random.choice(["sunny", "partly-sunny","cloudy", "rain","clear", "mostly-clear"]))
                     
                     if event.key == pygame.K_RIGHT:
                         self.debugWeatherIndex += 1
@@ -164,7 +168,8 @@ class WeatherManager:
             "mostly-sunny" : self.generateGradient(RES, (255, 244, 191), 40, 0, HEIGHT*1.1),
             "clear" : self.generateGradient(RES, (0, 0, 0), 100, 0, HEIGHT*0.9),
             "stars" : self.generateGradient(RES, (0, 0, 0), 220, 0, HEIGHT*0.8),
-            "snow" : self.generateGradient(RES, (100, 100, 100), 255, 180, HEIGHT*1.3)
+            "snow" : self.generateGradient(RES, (100, 100, 100), 255, 180, HEIGHT*1.3),
+            "lightning" : self.generateGradient(RES, (75, 75, 75), 255, 180, HEIGHT*1.3)
         }
 
         self.lensFlare = self.getImageWithOpacity("weather\\sunny\\lens flare.png", opacity=150)
@@ -178,6 +183,19 @@ class WeatherManager:
         # Moving overlay
         self.movingOverlay = []
         self.movingIndex = 0
+        self.loadedOverlay = None
+
+        self.flashes = [
+            [2, 1, 2],
+            [1, 2, 1],
+            [1, 2, 1, 2, 1],
+            [2, 3, 1, 3, 1]
+        ]
+
+        # Stores whether the screen is flashing, and is so how long for
+        self.flashing = [False, 0]
+        # Stores how many frames of flashing/non-flashing are left in the lightning animation
+        self.currentFlash = []
 
 
     def rotate(self, surface, angle, pivot, offset):
@@ -215,6 +233,9 @@ class WeatherManager:
         elif weathercode == "snow":
             self.loadMovingOverlay("weather\\snow\\", 150)
             self.activeWeather = self.snow
+        elif weathercode == "storm":
+            self.loadMovingOverlay("weather\\rain\\", 150)
+            self.activeWeather = self.storm
         
         else:
             self.activeWeather = self.mostlySunny
@@ -307,6 +328,49 @@ class WeatherManager:
         self.screen.blit(self.gradients["rain"], (0, 0))
         self.screen.blit(self.getMovingOverlay(), (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
+    
+    # Stormy
+    def storm(self):
+        self.screen.fill(BLUEGREY)
+        
+        if self.flashing[0] and not DISABLELIGHTNING:
+            self.screen.blit(self.gradients["lightning"], (0, 0))
+        else:
+            self.screen.blit(self.gradients["rain"], (0, 0))
+        
+        self.screen.blit(self.getMovingOverlay(), (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+        for cloud in self.clouds["cloudy"]:
+            cloud.render(self.screen)
+            cloud.advance()
+
+        
+        if not DISABLELIGHTNING:
+            if self.currentFlash != [] or self.flashing[0] == True:
+                # Continue flash animation
+                self.flashing[1] -= 1
+                if self.flashing[1] <= 0:
+                    if self.currentFlash == []:
+                        # End flash animation
+                        self.flashing = [False, 0]
+                    else:
+                        self.flashing[0] = not self.flashing[0]
+                        self.flashing[1] = self.currentFlash[0]
+                        self.currentFlash = self.currentFlash[1:]
+            
+            else:
+                # Random chance for flash
+                if random.randint(1, 30*60) == 69:
+                    self.flash()
+    
+    
+    # Lightning flash
+    def flash(self):
+        self.currentFlash = random.choice(self.flashes)
+        self.flashing[0] = True
+        self.flashing[1] = self.currentFlash[0]
+        self.currentFlash = self.currentFlash[1:]
+
+        
 
     def getMovingOverlay(self):
         """Gets the next frame in the moving overlay"""
@@ -318,17 +382,19 @@ class WeatherManager:
 
     def loadMovingOverlay(self, folder, opacity=255):
         """Loads a moving overlay like rain or snow"""
-        self.movingOverlay = []
-        self.opacityLayer = pygame.surface.Surface(RES, pygame.SRCALPHA, 32).convert_alpha()
-        self.opacityLayer.fill((0, 0, 0, 255-opacity))
+        if self.loadedOverlay != folder:
+            self.movingOverlay = []
+            self.opacityLayer = pygame.surface.Surface(RES, pygame.SRCALPHA, 32).convert_alpha()
+            self.opacityLayer.fill((0, 0, 0, 255-opacity))
 
-        for file in [f for f in os.listdir(folder) if os.path.isfile(folder+f)]:
-            img = pygame.image.load(folder+file).convert()
-            img = smartResize(img, RES, True)
-            img.blit(self.opacityLayer, (0, 0))
-            self.movingOverlay.append(img)
-        
-        del self.opacityLayer
+            for file in [f for f in os.listdir(folder) if os.path.isfile(folder+f)]:
+                img = pygame.image.load(folder+file).convert()
+                img = smartResize(img, RES, True)
+                img.blit(self.opacityLayer, (0, 0))
+                self.movingOverlay.append(img)
+            
+            self.loadedOverlay = folder
+            del self.opacityLayer
     
 
 
