@@ -127,7 +127,7 @@ class WeatherManager:
         codes = ["sunny", "partly-sunny",
                 "cloudy", "rain",
                 "fog", "snow",
-                "clear", "mostly-clear"]
+                "clear", "mostly-clear", "storm"]
         self.setWeather(random.choice(codes))
 
     
@@ -243,7 +243,7 @@ class WeatherManager:
             
             else:
                 # Random chance for flash
-                if random.randint(1, 30*60) == 69:
+                if random.randint(1, 30*30) == 69:
                     self.flash()
     
     
