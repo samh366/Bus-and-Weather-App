@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 Notes.txt
+democode/
 
 # C extensions
 *.so

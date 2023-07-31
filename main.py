@@ -1,5 +1,4 @@
 import os
-import random
 import time
 from datetime import datetime
 from threading import Thread
@@ -11,37 +10,30 @@ from bs4 import BeautifulSoup
 pygame.init()
 pygame.font.init()
 
-WIDTH = 1280
-HEIGHT = 720
+from classes.weather_manager import WeatherManager
+from classes.cloud import Cloud
+from classes.font_manager import FontManager
+from classes.utils import mins_to_mins_hours, smartResize
+
+### DISABLES FLASHING IMAGES ###
+DISABLELIGHTNING = False
+################################
+
+# Screen size
+RES = (1280, 720)
+WIDTH, HEIGHT = RES
+
+# Colours
 WHITE = (255, 255, 255)
 GREY = (175, 175, 175)
 BLUE = (72, 166, 207)
 
+# Requests timeout
 TIMEOUT = 10
 
 # Rain credit
 # 4kmotionworld
 
-
-# Resize an image maintaining aspect ratio
-def smartResize(surface, newSize, smooth=False):
-    """Resizes an image while keeping aspect ratio"""
-    size = surface.get_size()
-    x = abs(newSize[0] - size[0])
-    y = abs(newSize[1] - size[1])
-
-    if x <= y:
-        scale = newSize[0]/size[0]
-    else:
-        scale = newSize[1]/size[1]
-    finalSize = (size[0]*scale, size[1]*scale)
-
-    if smooth == True:
-        surface = pygame.transform.smoothscale(surface, (round(finalSize[0]), round(finalSize[1])))
-    else:
-        surface = pygame.transform.scale(surface, (round(finalSize[0]), round(finalSize[1])))
-    
-    return surface
 
 class App:
     def __init__(self):
@@ -59,14 +51,7 @@ class App:
         self.stopFilters = ["66", "67"]
 
         # Font manager
-        self.font = FontManager()
-
-        self.cloudyGradient = self.generateGradient((1280, 720), (100, 100, 100), 255, 120, 800)
-
-        # clouds
-        self.cloud = Cloud("clouds/big_cloud.png", 220, (500, 500), pos=(random.randint(800, 1000), random.randint(-30, 20)))
-        self.cloud2 = Cloud("clouds/big_cloud.png", 220, (500, 500), pos=(random.randint(-300, 400), random.randint(-30, 20)))
-        self.cloud2.flip()
+        self.font = FontManager(RES)
 
         # Data
         self.apiData = {
@@ -97,7 +82,19 @@ class App:
             {"service" : "66", "destination" : "York Sport Village"},
             {"service" : "67", "destination" : "York Sport Village"}
         ]
+
+
+        # Clouds
+        Cloud.width = WIDTH
+
+        # Debug weather info
+        self.debugWeatherCodes = ["sunny", "partly-sunny",
+                                  "cloudy", "rain",
+                                  "fog", "snow",
+                                  "clear", "mostly-clear"]
         
+        # Weather manager
+        self.weather = WeatherManager(self.screen, RES, DISABLELIGHTNING)
 
         # Static gui
         self.staticGUI = self.generateStaticGui()
@@ -105,15 +102,6 @@ class App:
         # Non-static gui
         self.nonStaticGUI = self.generateNonStaticGui()
         self.updateNonStaticGUI = False
-
-
-    def cloudy(self):
-        """Make the backdrop cloudy"""
-        self.screen.blit(self.cloudyGradient, (0, 0))
-        self.cloud.render(self.screen)
-        self.cloud2.render(self.screen)
-        self.cloud.advance()
-        self.cloud2.advance()
 
     
     def iconGetter(self, weather):
@@ -127,7 +115,6 @@ class App:
             return pygame.image.load("icons\\" + fileName)
         
         # Add other mappings
-
         if "showers" in weather:
             return pygame.image.load("icons\\rain.png")
         if "storm" in weather:
@@ -137,28 +124,7 @@ class App:
         if "wind" in weather or "tornado" in weather:
             return pygame.image.load("icons\\wind.png")
 
-
-
         return pygame.image.load("icons\\cloudy.png")
-
-        
-
-
-    def generateGradient(self, dimensions, color, startOP, endOP, duration):
-        """Generates a surface with a colour gradually fading in/out vertically"""
-        gradient = pygame.Surface(dimensions, pygame.SRCALPHA, 32)
-        pArray = pygame.PixelArray(gradient)
-        gradient = gradient.convert_alpha()
-
-        interval = duration / ((startOP - endOP) + 1)
-        for h in range(dimensions[1]):
-            opacity = startOP - (h // interval)
-            if opacity < endOP:
-                opacity = endOP
-
-            pArray[:, h] = (*color, opacity)
-        
-        return pArray.make_surface()
     
 
     def generateStaticGui(self):
@@ -228,7 +194,7 @@ class App:
             # Temp
             self.font.renderAndBlit(data["temperature"], self.font.temperature, nonStatic, (centre_x+75, 110))
             # Icon
-            image = self.iconGetter(data["weather"].lower()).convert_alpha()
+            image = self.iconGetter(data["weather"].lower().replace(" ", "-")).convert_alpha()
             image = smartResize(image, (130, 130), smooth=True)
             self.font.centreAndBlitImage(image, nonStatic, (centre_x-87, 100))
             # Location
@@ -287,7 +253,7 @@ class App:
                 if responseData["times"] != []:
                     for bus in responseData["times"]:
                         if bus["ServiceNumber"] == self.stopFilters[index]:
-                            busData["times"].append(self.mins_to_mins_hours(bus["Due"]))
+                            busData["times"].append(mins_to_mins_hours(bus["Due"]))
                             busData["destination"] = bus["Destination"]
                 
                 data[index] = busData
@@ -348,6 +314,7 @@ class App:
             self.apiData["daily"]["data"] = daily
 
             self.updateNonStaticGUI = True
+            self.weather.setWeather(self.apiData["daily"]["data"]["weather"].lower().replace(" ", "-"))
         
         else:
             print("Something went wrong with getting daily data")
@@ -358,8 +325,6 @@ class App:
         self.status = ""
 
     
-
-
 
     def getWeeklyForecast(self):
             """Requests data about the temperature for the next week"""
@@ -414,25 +379,6 @@ class App:
             self.requesting = False
             self.status = ""
 
-
-    def mins_to_mins_hours(self, mins):
-        """Converts 77 mins to 1h 17 mins as an example"""
-        if mins == "Due now":
-            return mins
-        time = int(mins.rstrip(" mins"))
-
-        if time == 60:
-            return "1h 00m"
-        elif time < 60:
-            return mins
-        else:
-            hours = time // 60
-            minutes = str(time - (hours*60))
-
-            minutes = minutes.zfill(2)
-
-            return f"{hours}h {minutes}m"
-
     
     def dataCheck(self):
         """Checks for missing or expired data, if so requests it"""
@@ -475,14 +421,21 @@ class App:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
 
+                    # Good for debugging
+                    if event.key == pygame.K_SPACE:
+                        self.weather.randomise()
+                    
+                    if event.key == pygame.K_r:
+                        self.weather.setWeather(self.apiData["daily"]["data"]["weather"].lower().replace(" ", "-"))
+
             # Check data
             if not self.requesting:
                 self.dataCheck()
             
-            self.screen.fill(BLUE)
+            # Dynamic weather
+            self.weather.renderWeather()
 
-            self.cloudy()
-
+            # Static and non-static GUI
             self.screen.blit(self.staticGUI, (0, 0))
 
             if self.updateNonStaticGUI == True:
@@ -500,102 +453,7 @@ class App:
 
 
             pygame.display.flip()
-            self.clock.tick(60)
-
-
-
-class Cloud:
-    def __init__(self, image, opacity, size, pos):
-        self.image = pygame.image.load(image)
-        self.image = smartResize(self.image, size)
-        self.image.set_alpha(opacity)
-        self.size = self.image.get_size()
-
-        self.pos = list(pos)
-
-        self.randSpeed()
-    
-
-    def render(self, surface):
-        surface.blit(self.image, self.roundPos())
-    
-    def randSpeed(self):
-        self.speed = -1 * random.uniform(0.1, 0.2)
-    
-    def flip(self):
-        self.image = pygame.transform.flip(self.image, flip_y=False, flip_x=True)
-
-    
-    def advance(self):
-        self.pos = [self.pos[0]+self.speed, self.pos[1]]
-        # Check if a loop is needed
-        if self.pos[0] > WIDTH+110:
-            self.pos[0] = -self.size[0]
-            self.randSpeed()
-        
-        if self.pos[0] < -self.size[0]-10:
-            self.pos[0] = WIDTH + 100
-            self.randSpeed()
-    
-
-    def roundPos(self):
-        return [round(self.pos[0]), round(self.pos[1])]
-
-
-
-class FontManager:
-    def __init__(self):
-        """
-        A class to keep track of all the different sizes of fonts used
-        Font sizes are defined as fractions to ensure the display scales between all 16:9 resolutions
-        """
-        fontDir = "fonts\\Martel_Sans\\MartelSans-"
-        self.busNum = pygame.font.Font(fontDir+"SemiBold.ttf", round((128/720)*HEIGHT))
-        self.subtitle = pygame.font.Font(fontDir+"Regular.ttf", round((24/720)*HEIGHT))
-        self.stopName = pygame.font.Font(fontDir+"Regular.ttf", round((36/720)*HEIGHT))
-        self.nextTime = pygame.font.Font(fontDir+"SemiBold.ttf", round((62/720)*HEIGHT))
-        self.nextTimeList = pygame.font.Font(fontDir+"Regular.ttf", round((32/720)*HEIGHT))
-        self.temperature = pygame.font.Font(fontDir+"Regular.ttf", round((110/720)*HEIGHT))
-        self.weather = pygame.font.Font(fontDir+"Regular.ttf", round((52/720)*HEIGHT))
-        self.smallweatherdata = pygame.font.Font(fontDir+"Regular.ttf", round((20/720)*HEIGHT))
-        self.forecast = self.subtitle
-        self.statusFont = pygame.font.Font(fontDir+"Regular.ttf", round((13/720)*HEIGHT))
-    
-
-    def renderAndBlit(self, text, font, surface, coords, color=WHITE, centre=True, anchor=(0, 0), mode=0):
-        """Renders some text in the given font and blits it onto the given surface"""
-        textSurface = font.render(text, True, color)
-
-        if centre == True:
-            coords = self.centreCoords(textSurface, coords, anchor)
-        
-        surface.blit(textSurface, coords, special_flags=mode)
-    
-
-    
-    def centreAndBlitImage(self, image, surface, coords, centre=True):
-        """An additional function to centre an image"""
-        if centre == True:
-            coords = self.centreCoords(image, coords)
-        
-        surface.blit(image, coords)
-
-
-    def centreCoords(self, surface, coords, anchor=(0, 0)):
-        """
-        Shifts the coordinates to the midpoint of the surface
-        Also shifts the coordinates based on the given anchor value
-        """
-
-        coords = list(coords)
-
-        w, h = surface.get_size()
-
-        coords[0] -= w//2 - anchor[0]*w
-        coords[1] -= h//2 - anchor[1]*h
-    
-        return coords
-
+            self.clock.tick(30)
 
 
 
