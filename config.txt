@@ -1,0 +1,13 @@
+{
+    "atco_code1" : "3290YYA01059",
+    "atco_code2" : "3290YYA00285",
+
+    "stop_filters" : ["66", "67"],
+
+    "default_service_data" : [
+        {"service" : "66", "destination" : "York Sport Village"},
+        {"service" : "67", "destination" : "York Sport Village"}
+    ],
+
+    "weather.com_code" : "f069b5c5b290a3dd147139a4b9fca15be1ff8c95e8b7de58304c6389e2297e52"
+}

@@ -1,5 +1,6 @@
 import os
 import random
+import datetime
 
 import pygame
 
@@ -87,11 +88,15 @@ class WeatherManager:
         """Sets the function to be used to display the weather and loads any needed overlays"""
 
         weathercode = weathercode.lower().replace(" ", "-")
+        hour = datetime.datetime.now().hour
+        night = True
+        if hour > 5 and hour < 22:
+            night = False
 
         # Not the most glamorus way to do things
         # But it works and it's easy to understand ¯\_(ツ)_/¯
 
-        if weathercode == "cloudy":
+        if weathercode == "cloudy" or weathercode == "mostly-cloudy":
             self.activeWeather = self.cloudy
         elif weathercode == "rain" or "shower" in weathercode:
             self.loadMovingOverlay("weather\\rain\\", 150)
@@ -102,7 +107,7 @@ class WeatherManager:
             self.activeWeather = self.sunny
         elif weathercode == "clear":
             self.activeWeather = self.clear
-        elif weathercode == "mostly-clear":
+        elif weathercode == "mostly-clear" or (weathercode == "mostly-cloudy" and night == True):
             self.activeWeather = self.mostlyClear
         elif weathercode == "snow":
             self.loadMovingOverlay("weather\\snow\\", 150)

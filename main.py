@@ -13,7 +13,7 @@ pygame.font.init()
 from classes.weather_manager import WeatherManager
 from classes.cloud import Cloud
 from classes.font_manager import FontManager
-from classes.utils import mins_to_mins_hours, smartResize
+from classes.utils import mins_to_mins_hours, smartResize, loadConfig
 
 ### DISABLES FLASHING IMAGES ###
 DISABLELIGHTNING = False
@@ -44,11 +44,19 @@ class App:
         self.requesting = False
         self.status = ""
 
-        # ATCO Codes
-        self.ATCOCode1 = "3290YYA01059" # 66
-        self.ATCOCode2 = "3290YYA00285" # 67
-        # Filter the busses you want from each stop
-        self.stopFilters = ["66", "67"]
+
+        # Loads ATCO codes to request data from
+        # Loads which bus to get from each stop
+        # Additionally, loads default information about the bus service data if it cannot be grabbed
+        # And loads the weather.com url code to get area weather data from
+
+        self.config = loadConfig("config.txt")
+
+        # # ATCO Codes
+        # self.ATCOCode1 = "3290YYA01059" # 66
+        # self.ATCOCode2 = "3290YYA00285" # 67
+        # # Filter the busses you want from each stop
+        # self.stopFilters = ["66", "67"]
 
         # Font manager
         self.font = FontManager(RES)
@@ -65,7 +73,7 @@ class App:
                     "weekly" : {
                         "lastSuccessfulRequest" : None,
                         "mostRecentRequest" : None,
-                        "interval" : 60*30,
+                        "interval" : 60*60,
                         "data" : None
                     },
 
@@ -77,11 +85,11 @@ class App:
                     },
                 }
         
-        # Default bus data, used to display the service and destination if they cannot be fetched
-        self.defaultBusData = [
-            {"service" : "66", "destination" : "York Sport Village"},
-            {"service" : "67", "destination" : "York Sport Village"}
-        ]
+        # # Default bus data, used to display the service and destination if they cannot be fetched
+        # self.defaultBusData = [
+        #     {"service" : "66", "destination" : "York Sport Village"},
+        #     {"service" : "67", "destination" : "York Sport Village"}
+        # ]
 
 
         # Clouds
@@ -161,13 +169,13 @@ class App:
             if bus != {}:
                 # Check for missing values
                 if bus["destination"] == "":
-                    bus["destination"] = self.defaultBusData[index]["destination"]
+                    bus["destination"] = self.config["default_service_data"][index]["destination"]
 
 
                 # Calc x value to align text to
                 centre_x = (2*index + 1) * (WIDTH//6)
                 # Service names
-                self.font.renderAndBlit(self.stopFilters[index], self.font.busNum, nonStatic, (centre_x, 110))
+                self.font.renderAndBlit(self.config["stop_filters"][index], self.font.busNum, nonStatic, (centre_x, 110))
                 # Subtitle
                 self.font.renderAndBlit(bus["destination"], self.font.subtitle, nonStatic, (centre_x, 188))
                 # Stop name
@@ -231,7 +239,7 @@ class App:
 
         data = [{}, {}]
 
-        for index, code in enumerate([self.ATCOCode1, self.ATCOCode2]):
+        for index, code in enumerate([self.config["atco_code1"], self.config["atco_code2"]]):
             self.status = "Fetching bus time data for stop {}...".format(str(index+1))
             busData = {}
             url = "https://www.firstbus.co.uk/getNextBus"
@@ -252,7 +260,7 @@ class App:
                 
                 if responseData["times"] != []:
                     for bus in responseData["times"]:
-                        if bus["ServiceNumber"] == self.stopFilters[index]:
+                        if bus["ServiceNumber"] == self.config["stop_filters"][index]:
                             busData["times"].append(mins_to_mins_hours(bus["Due"]))
                             busData["destination"] = bus["Destination"]
                 
@@ -280,7 +288,7 @@ class App:
         """Scrapes current weather data from weather.com"""
         self.requesting = True
         self.status = "Fetching daily weather data..."
-        url = "https://weather.com/en-GB/weather/today/l/f069b5c5b290a3dd147139a4b9fca15be1ff8c95e8b7de58304c6389e2297e52"
+        url = "https://weather.com/en-GB/weather/today/l/" + self.config["weather.com_code"]
         response = requests.get(url, timeout=TIMEOUT)
         print("Request for daily data made")
         check = datetime.now()
@@ -386,7 +394,7 @@ class App:
 
         # Check bus data
         dat = self.apiData["bus"]
-        if dat["data"] == [{}, {}] or (now - dat["mostRecentRequest"]).total_seconds() >= dat["interval"]:
+        if dat["data"] == [{}, {}] or dat["mostRecentRequest"] == None or (now - dat["mostRecentRequest"]).total_seconds() >= dat["interval"]:
             # Request data in a new thread
             self.requesting = True
             thread = Thread(target = self.getBusData, daemon=True)
@@ -427,6 +435,9 @@ class App:
                     
                     if event.key == pygame.K_r:
                         self.weather.setWeather(self.apiData["daily"]["data"]["weather"].lower().replace(" ", "-"))
+
+                    if event.key == pygame.K_RETURN:
+                        self.apiData["bus"]["mostRecentRequest"] = None
 
             # Check data
             if not self.requesting:

@@ -1,4 +1,5 @@
 import pygame
+import json
 
 def smartResize(surface, newSize, smooth=False):
     """Resizes an image while keeping aspect ratio"""
@@ -38,3 +39,12 @@ def mins_to_mins_hours(mins):
         minutes = minutes.zfill(2)
 
         return f"{hours}h {minutes}m"
+    
+
+
+def loadConfig(file):
+    """Loads config info from config.txt"""
+    with open(file, "r") as configfile:
+        data = json.loads(configfile.read())
+    
+    return data
