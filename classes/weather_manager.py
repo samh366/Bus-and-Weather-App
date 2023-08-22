@@ -1,12 +1,12 @@
+import datetime
 import os
 import random
-import datetime
+from os.path import join
 
 import pygame
 
-from classes.utils import smartResize
 from classes.cloud import Cloud
-
+from classes.utils import smartResize
 
 WHITE = (255, 255, 255)
 GREY = (175, 175, 175)
@@ -28,16 +28,16 @@ class WeatherManager:
 
         self.clouds = {
             "cloudy" : [
-                Cloud("weather\\clouds\\big_cloud.png", 220, (500, 500), pos=(random.randint(800, 1000), random.randint(-30, 20))),
-                Cloud("weather\\clouds\\big_cloud.png", 220, (500, 500), pos=(random.randint(-300, 400), random.randint(-30, 20)))
+                Cloud(join("weather", "clouds", "big_cloud.png"), 220, (500, 500), pos=(random.randint(800, 1000), random.randint(-30, 20))),
+                Cloud(join("weather", "clouds", "big_cloud.png"), 220, (500, 500), pos=(random.randint(-300, 400), random.randint(-30, 20)))
             ],
             "mostly sunny" : [
-                Cloud("weather\\clouds\\cloud3.png", 220, (400, 400), pos=(random.randint(800, 1000), random.randint(-30, 20))),
-                Cloud("weather\\clouds\\cloud4.png", 230, (300, 300), pos=(random.randint(-300, 400), random.randint(-30, 20)))
+                Cloud(join("weather", "clouds", "cloud3.png"), 220, (400, 400), pos=(random.randint(800, 1000), random.randint(-30, 20))),
+                Cloud(join("weather", "clouds", "cloud4.png"), 230, (300, 300), pos=(random.randint(-300, 400), random.randint(-30, 20)))
             ],
             "mostly clear" : [
-                Cloud("weather\\clouds\\dark_cloud1.png", 180, size=(400, 400), pos=(random.randint(800, 1000), random.randint(-30, 20))),
-                Cloud("weather\\clouds\\dark_cloud2.png", 180, size=(300, 300), pos=(random.randint(-300, 400), random.randint(-30, 20)))
+                Cloud(join("weather", "clouds", "dark_cloud1.png"), 180, size=(400, 400), pos=(random.randint(800, 1000), random.randint(-30, 20))),
+                Cloud(join("weather", "clouds", "dark_cloud2.png"), 180, size=(300, 300), pos=(random.randint(-300, 400), random.randint(-30, 20)))
             ]
         }
 
@@ -54,11 +54,9 @@ class WeatherManager:
             "fog" : self.generateGradient(self.RES, (120, 120, 120), 230, 130, self.HEIGHT*1.2)
         }
 
-        self.lensFlare = self.getImageWithOpacity("weather\\sunny\\lens flare.png", opacity=150)
-        self.stars = self.getImageWithOpacity("weather\\stars\\bigstars.png", opacity=150, resize=False)
-        self.dimStars = self.getImageWithOpacity("weather\\stars\\bigstars.png", opacity=100, resize=False)
-        self.stars2 = self.getImageWithOpacity("weather\\stars\\stars.png", opacity=150)
-        self.fogOverlay = self.getImageWithOpacity("weather\\fog\\" + random.choice(["fog1.jpg", "fog2.jpg"]), opacity=100)
+        self.lensFlare = self.getImageWithOpacity(join("weather", "sunny", "lens flare.png"), opacity=150)
+        self.stars = self.getImageWithOpacity(join("weather", "stars", "stars.png"), opacity=150)
+        self.fogOverlay = self.getImageWithOpacity(join("weather", "fog", random.choice(["fog1.jpg", "fog2.jpg"])), opacity=100)
         
         # Position info for specific overlays
         self.starPos = 0
@@ -98,7 +96,7 @@ class WeatherManager:
         if weathercode == "cloudy" or weathercode == "mostly-cloudy":
             self.activeWeather = self.cloudy
         elif "rain" in weathercode or "shower" in weathercode:
-            self.loadMovingOverlay("weather\\rain\\", 150)
+            self.loadMovingOverlay(join("weather", "rain"), 150)
             self.activeWeather = self.rain
         elif weathercode == "mostly-sunny":
             self.activeWeather = self.mostlySunny
@@ -109,10 +107,10 @@ class WeatherManager:
         elif weathercode == "mostly-clear" or (weathercode == "mostly-cloudy" and night == True):
             self.activeWeather = self.mostlyClear
         elif weathercode == "snow":
-            self.loadMovingOverlay("weather\\snow\\", 150)
+            self.loadMovingOverlay(join("weather", "snow"), 150)
             self.activeWeather = self.snow
         elif weathercode == "storm":
-            self.loadMovingOverlay("weather\\rain\\", 150)
+            self.loadMovingOverlay(join("weather", "rain"), 150)
             self.activeWeather = self.storm
         elif weathercode == "fog":
             self.activeWeather = self.fog
@@ -159,8 +157,8 @@ class WeatherManager:
         self.screen.blit(self.gradients["clear"], (0, 0))
 
         starSurface = pygame.surface.Surface(self.RES)
-        starSurface.blit(self.stars2, (0, round(self.starPos)))
-        starSurface.blit(self.stars2, (0, round(self.starPos)-self.HEIGHT))
+        starSurface.blit(self.stars, (0, round(self.starPos)))
+        starSurface.blit(self.stars, (0, round(self.starPos)-self.HEIGHT))
 
         self.starPos += 0.25
         if self.starPos > self.HEIGHT:
@@ -290,8 +288,8 @@ class WeatherManager:
             self.opacityLayer = pygame.surface.Surface(self.RES, pygame.SRCALPHA, 32).convert_alpha()
             self.opacityLayer.fill((0, 0, 0, 255-opacity))
 
-            for file in [f for f in os.listdir(folder) if os.path.isfile(folder+f)]:
-                img = pygame.image.load(folder+file).convert()
+            for file in [f for f in os.listdir(folder) if os.path.isfile(join(folder, f))]:
+                img = pygame.image.load(join(folder, file)).convert()
                 img = smartResize(img, self.RES, True)
                 img.blit(self.opacityLayer, (0, 0))
                 self.movingOverlay.append(img)

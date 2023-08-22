@@ -1,3 +1,5 @@
+from os.path import join
+
 import pygame
 
 WHITE = (255, 255, 255)
@@ -11,7 +13,7 @@ class FontManager:
         """
         self.width, self.height = resolution
 
-        fontDir = "fonts\\Martel_Sans\\MartelSans-"
+        fontDir = join("fonts", "Martel_Sans", "MartelSans-")
         self.busNum = pygame.font.Font(fontDir+"SemiBold.ttf", round((128/720)*self.height))
         self.subtitle = pygame.font.Font(fontDir+"Regular.ttf", round((24/720)*self.height))
         self.stopName = pygame.font.Font(fontDir+"Regular.ttf", round((36/720)*self.height))

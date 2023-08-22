@@ -1,5 +1,7 @@
-import pygame
 import json
+
+import pygame
+
 
 def smartResize(surface, newSize, smooth=False):
     """Resizes an image while keeping aspect ratio"""

@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime
+from os.path import join
 from threading import Thread
 
 import pygame
@@ -10,10 +11,10 @@ from bs4 import BeautifulSoup
 pygame.init()
 pygame.font.init()
 
-from classes.weather_manager import WeatherManager
 from classes.cloud import Cloud
 from classes.font_manager import FontManager
-from classes.utils import mins_to_mins_hours, smartResize, loadConfig
+from classes.utils import loadConfig, mins_to_mins_hours, smartResize
+from classes.weather_manager import WeatherManager
 
 ### DISABLES FLASHING IMAGES ###
 DISABLELIGHTNING = False
@@ -107,35 +108,35 @@ class App:
     def iconGetter(self, weather):
         """Returns the correct icon based on a weather type"""
         # Get icons
-        icons = [file for file in os.listdir("icons") if os.path.isfile("icons\\" + file)]
+        icons = [file for file in os.listdir("icons") if os.path.isfile(join("icons", file))]
 
         fileName = weather.replace(" ", "-") + ".png"
 
         if fileName in icons:
-            return pygame.image.load("icons\\" + fileName)
+            return pygame.image.load(join("icons", fileName))
         
         # Add other mappings
         if "showers" in weather:
-            return pygame.image.load("icons\\rain.png")
+            return pygame.image.load(join("icons", "rain.png"))
         if "storm" in weather:
-            return pygame.image.load("icons\\lightning.png")
+            return pygame.image.load(join("icons", "lightning.png"))
         if "snow" in weather or "hail" in weather:
-            return pygame.image.load("icons\\snow.png")
+            return pygame.image.load(join("icons", "snow.png"))
         if "wind" in weather or "tornado" in weather:
-            return pygame.image.load("icons\\wind.png")
+            return pygame.image.load(join("icons", "wind.png"))
 
         return pygame.image.load("icons\\cloudy.png")
     
 
     # Gets downscaled versions of the weather icons
     def getMiniIcons(self):
-        icons = [file for file in os.listdir("icons") if os.path.isfile("icons\\" + file)]
+        icons = [file for file in os.listdir("icons") if os.path.isfile(join("icons", file))]
         minis = {}
 
         scale = (30, 30)
 
         for icon in icons:
-            minis[icon[:-4]] = pygame.transform.smoothscale(pygame.image.load("icons\\" + icon), scale)
+            minis[icon[:-4]] = pygame.transform.smoothscale(pygame.image.load(join("icons", icon)), scale)
         
         return minis
     
