@@ -20,7 +20,7 @@ DISABLELIGHTNING = False
 ################################
 
 # Screen size
-RES = (1280, 720)
+RES = (1280, 800)
 WIDTH, HEIGHT = RES
 
 # Colours
@@ -52,14 +52,11 @@ class App:
 
         self.config = loadConfig("config.txt")
 
-        # # ATCO Codes
-        # self.ATCOCode1 = "3290YYA01059" # 66
-        # self.ATCOCode2 = "3290YYA00285" # 67
-        # # Filter the busses you want from each stop
-        # self.stopFilters = ["66", "67"]
-
         # Font manager
         self.font = FontManager(RES)
+
+        # Load mini icons
+        self.miniIcons = self.getMiniIcons()
 
         # Data
         self.apiData = {
@@ -84,12 +81,6 @@ class App:
                         "data" : [{}, {}]
                     },
                 }
-        
-        # # Default bus data, used to display the service and destination if they cannot be fetched
-        # self.defaultBusData = [
-        #     {"service" : "66", "destination" : "York Sport Village"},
-        #     {"service" : "67", "destination" : "York Sport Village"}
-        # ]
 
 
         # Clouds
@@ -110,6 +101,7 @@ class App:
         # Non-static gui
         self.nonStaticGUI = self.generateNonStaticGui()
         self.updateNonStaticGUI = False
+
 
     
     def iconGetter(self, weather):
@@ -135,6 +127,40 @@ class App:
         return pygame.image.load("icons\\cloudy.png")
     
 
+    # Gets downscaled versions of the weather icons
+    def getMiniIcons(self):
+        icons = [file for file in os.listdir("icons") if os.path.isfile("icons\\" + file)]
+        minis = {}
+
+        scale = (30, 30)
+
+        for icon in icons:
+            minis[icon[:-4]] = pygame.transform.smoothscale(pygame.image.load("icons\\" + icon), scale)
+        
+        return minis
+    
+    def translateWMOCode(self, code):
+        """Translates a WMO weather code into a file icon name"""
+        if code == 0:
+            return "sunny"
+        elif code == 1:
+            return "mostly-sunny"
+        elif code == 2:
+            return "mostly-cloudy-day"
+        elif code == 3:
+            return "cloudy"
+        elif code in [45, 48]:
+            return "fog"
+        elif code in [51, 53, 55, 56, 57, 80]:
+            return "light-rain"
+        elif code in [61, 63, 65, 66, 67, 81, 82]:
+            return "rain"
+        elif code in [71, 73, 75, 77, 85, 86]:
+            return "snow"
+        elif code in [95, 96, 99]:
+            return "lightning"
+    
+
     def generateStaticGui(self):
         """Generates the unchanging elements of the gui"""
         static = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA, 32)
@@ -145,8 +171,8 @@ class App:
 
         # Generate 3 sets of 2 lines
         length = 100
-        height = 350
-        yspacing = 120
+        height = (350/720)*HEIGHT
+        yspacing = (120/720)*HEIGHT
         for i in range(1, 6, 2):
             pygame.draw.line(static, WHITE, (i*(WIDTH//6)-length//2, height - yspacing//2), (i*(WIDTH//6)+length//2, height - yspacing//2))
             pygame.draw.line(static, WHITE, (i*(WIDTH//6)-length//2, height + yspacing//2), (i*(WIDTH//6)+length//2, height + yspacing//2))
@@ -171,26 +197,28 @@ class App:
                 if bus["destination"] == "":
                     bus["destination"] = self.config["default_service_data"][index]["destination"]
 
-
                 # Calc x value to align text to
                 centre_x = (2*index + 1) * (WIDTH//6)
                 # Service names
-                self.font.renderAndBlit(self.config["stop_filters"][index], self.font.busNum, nonStatic, (centre_x, 110))
+                self.font.renderAndBlit(self.config["stop_filters"][index], self.font.busNum, nonStatic, (centre_x, (110/720)*HEIGHT))
                 # Subtitle
-                self.font.renderAndBlit(bus["destination"], self.font.subtitle, nonStatic, (centre_x, 188))
+                self.font.renderAndBlit(bus["destination"], self.font.subtitle, nonStatic, (centre_x, (188/720)*HEIGHT))
                 # Stop name
-                self.font.renderAndBlit(bus["stop name"], self.font.stopName, nonStatic, (centre_x, 240))
+                self.font.renderAndBlit(bus["stop name"], self.font.stopName, nonStatic, (centre_x, (240/720)*HEIGHT))
                 # Next time
                 if bus["times"] != []:
-                    self.font.renderAndBlit(bus["times"][0], self.font.nextTime, nonStatic, (centre_x, 354))
+                    self.font.renderAndBlit(bus["times"][0], self.font.nextTime, nonStatic, (centre_x, (354/720)*HEIGHT))
                 else:
-                    self.font.renderAndBlit("Not Running", self.font.nextTime, nonStatic, (centre_x, 354))
+                    if HEIGHT <= 750:
+                        self.font.renderAndBlit("Not Running", self.font.nextTime, nonStatic, (centre_x, (354/720)*HEIGHT))
+                    else:
+                        self.font.renderAndBlit("Not Running", self.font.nextTimeSmaller, nonStatic, (centre_x, (354/720)*HEIGHT))
                 # Next departures subtitle
-                self.font.renderAndBlit("Next Departures", self.font.subtitle, nonStatic, (centre_x, 450))
+                self.font.renderAndBlit("Next Departures", self.font.subtitle, nonStatic, (centre_x, (450/720)*HEIGHT))
 
                 # List next departures
                 for j, time in enumerate(bus["times"][1:4]):
-                    self.font.renderAndBlit(time, self.font.nextTimeList, nonStatic, (centre_x, 500 + j*67))
+                    self.font.renderAndBlit(time, self.font.nextTimeList, nonStatic, (centre_x, ((500 + j*67)/720)*HEIGHT))
 
 
         # Current day weather information
@@ -200,20 +228,20 @@ class App:
         if self.apiData["daily"]["data"] != None:
             data = self.apiData["daily"]["data"]
             # Temp
-            self.font.renderAndBlit(data["temperature"], self.font.temperature, nonStatic, (centre_x+75, 110))
+            self.font.renderAndBlit(data["temperature"], self.font.temperature, nonStatic, (centre_x+75, (110/720)*HEIGHT))
             # Icon
             image = self.iconGetter(data["weather"].lower().replace(" ", "-")).convert_alpha()
             image = smartResize(image, (130, 130), smooth=True)
-            self.font.centreAndBlitImage(image, nonStatic, (centre_x-87, 100))
+            self.font.centreAndBlitImage(image, nonStatic, (centre_x-87, (100/720)*HEIGHT))
             # Location
-            self.font.renderAndBlit(data["location"], self.font.subtitle, nonStatic, (centre_x, 188))
+            self.font.renderAndBlit(data["location"], self.font.subtitle, nonStatic, (centre_x, (188/720)*HEIGHT))
             # Time
             # Blitted every frame in main
             # Weather
-            self.font.renderAndBlit(data["weather"], self.font.weather, nonStatic, (centre_x, 337))
+            self.font.renderAndBlit(data["weather"], self.font.weather, nonStatic, (centre_x, (337/720)*HEIGHT))
             # Wind speed + wind speed
             self.font.renderAndBlit("Wind: " + data["windspeed"] + "mph" + " "*7 + "Rain: " + data["rain chance"],
-                                    self.font.smallweatherdata, nonStatic, (centre_x, 385))
+                                    self.font.smallweatherdata, nonStatic, (centre_x, (385/720)*HEIGHT))
         
         # Weather forecast for the next week
         weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -221,16 +249,19 @@ class App:
         if self.apiData["weekly"]["data"] != None:
             for index, day in enumerate(self.apiData["weekly"]["data"]):
                 # Day
-                self.font.renderAndBlit(weekdays[day[0]], self.font.forecast, nonStatic, (centre_x-160, 415+(index*40)), centre=False)
+                self.font.renderAndBlit(weekdays[day[0]], self.font.forecast, nonStatic, (centre_x-160, ((415+(index*40))/720)*HEIGHT), centre=False)
+
+                # Mini icon
+                self.font.centreAndBlitImage(self.miniIcons[self.translateWMOCode(day[1])], nonStatic, (centre_x+10, ((425+(index*40))/720)*HEIGHT), centre=False)
 
                 # Highest temp
-                self.font.renderAndBlit(str(round(day[2])), self.font.forecast, nonStatic, (centre_x+90, 415+(index*40)), centre=False)
+                self.font.renderAndBlit(str(round(day[2])), self.font.forecast, nonStatic, (centre_x+90, ((415+(index*40))/720)*HEIGHT), centre=False)
 
                 # Lowest temp
-                self.font.renderAndBlit(str(round(day[3])), self.font.forecast, nonStatic, (centre_x+135, 415+(index*40)), centre=False, color=GREY, mode=pygame.BLEND_RGBA_MAX)
+                self.font.renderAndBlit(str(round(day[3])), self.font.forecast, nonStatic, (centre_x+135, ((415+(index*40))/720)*HEIGHT), centre=False, color=(196, 196, 196), mode=pygame.BLEND_RGBA_MAX)
 
         return nonStatic
-    
+
 
 
     # Data getters
@@ -245,8 +276,14 @@ class App:
             url = "https://www.firstbus.co.uk/getNextBus"
             args = {"stop" : code}
 
-            response = requests.get(url, args, timeout=TIMEOUT)
-            print(f"Request for stop [{code}] data made")
+            try:
+                print("Fetching bus time data for stop {}...".format(str(index+1)))
+                response = requests.get(url, args, timeout=TIMEOUT)
+            
+            except requests.exceptions.ConnectionError:
+                self.status = "Connection error occured getting bus data"
+                self.requesting = False
+                return
 
             check = datetime.now()
             self.apiData["bus"]["mostRecentRequest"] = check
@@ -289,8 +326,8 @@ class App:
         self.requesting = True
         self.status = "Fetching daily weather data..."
         url = "https://weather.com/en-GB/weather/today/l/" + self.config["weather.com_code"]
-        response = requests.get(url, timeout=TIMEOUT)
-        print("Request for daily data made")
+        print("Requesting daily data...")
+        response = requests.get(url, timeout=15)
         check = datetime.now()
         self.apiData["daily"]["mostRecentRequest"] = check
         
@@ -377,6 +414,7 @@ class App:
                 self.apiData["weekly"]["data"] = formatted
 
                 self.updateNonStaticGUI = True
+                print(formatted)
 
             
             else:
@@ -457,7 +495,7 @@ class App:
 
             # Update time
             time = datetime.now().strftime("%I:%M %p").lstrip("0")
-            self.font.renderAndBlit(time, self.font.stopName, self.screen, (5*(WIDTH//6), 243))
+            self.font.renderAndBlit(time, self.font.timeFont, self.screen, (5*(WIDTH//6), (243/720)*HEIGHT))
 
             # Blit status
             self.font.renderAndBlit(self.status, self.font.statusFont, self.screen, (WIDTH//2, HEIGHT*0.985))

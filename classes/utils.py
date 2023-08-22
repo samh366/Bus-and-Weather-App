@@ -26,6 +26,8 @@ def mins_to_mins_hours(mins):
     """Converts 77 mins to 1h 17 mins as an example"""
     if mins == "Due now":
         return mins
+    if ":" in mins:
+        return mins
     time = int(mins.rstrip(" mins"))
 
     if time == 60:

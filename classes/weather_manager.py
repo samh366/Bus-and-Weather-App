@@ -61,7 +61,6 @@ class WeatherManager:
         self.fogOverlay = self.getImageWithOpacity("weather\\fog\\" + random.choice(["fog1.jpg", "fog2.jpg"]), opacity=100)
         
         # Position info for specific overlays
-        self.starAngle = 0
         self.starPos = 0
         self.fogPos = 0
 
@@ -98,7 +97,7 @@ class WeatherManager:
 
         if weathercode == "cloudy" or weathercode == "mostly-cloudy":
             self.activeWeather = self.cloudy
-        elif weathercode == "rain" or "shower" in weathercode:
+        elif "rain" in weathercode or "shower" in weathercode:
             self.loadMovingOverlay("weather\\rain\\", 150)
             self.activeWeather = self.rain
         elif weathercode == "mostly-sunny":
@@ -155,15 +154,15 @@ class WeatherManager:
     
     # Clear
     def clear(self):
-        self.starAngle += 0.035
+        # A gradient of stars that slowly moves downward
         self.screen.fill(DARKBLUE)
         self.screen.blit(self.gradients["clear"], (0, 0))
 
         starSurface = pygame.surface.Surface(self.RES)
-        starSurface.blit(self.stars2, (0, self.starPos))
-        starSurface.blit(self.stars2, (0, self.starPos-self.HEIGHT))
+        starSurface.blit(self.stars2, (0, round(self.starPos)))
+        starSurface.blit(self.stars2, (0, round(self.starPos)-self.HEIGHT))
 
-        self.starPos += 0.3
+        self.starPos += 0.25
         if self.starPos > self.HEIGHT:
             self.starPos = 0
 
@@ -267,7 +266,7 @@ class WeatherManager:
 
         # Moving fog overlay
         self.screen.blit(self.fogOverlay, (round(self.fogPos), 0), special_flags=pygame.BLEND_RGB_ADD)
-        self.screen.blit(self.fogOverlay, (round(self.fogPos - self.WIDTH), 0), special_flags=pygame.BLEND_RGB_ADD)
+        self.screen.blit(self.fogOverlay, (round(self.fogPos - self.fogOverlay.get_width()), 0), special_flags=pygame.BLEND_RGB_ADD)
 
         self.fogPos += 0.5
         if self.fogPos > self.WIDTH:

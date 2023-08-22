@@ -16,12 +16,14 @@ class FontManager:
         self.subtitle = pygame.font.Font(fontDir+"Regular.ttf", round((24/720)*self.height))
         self.stopName = pygame.font.Font(fontDir+"Regular.ttf", round((36/720)*self.height))
         self.nextTime = pygame.font.Font(fontDir+"SemiBold.ttf", round((62/720)*self.height))
+        self.nextTimeSmaller = pygame.font.Font(fontDir+"SemiBold.ttf", round((55/720)*self.height))
         self.nextTimeList = pygame.font.Font(fontDir+"Regular.ttf", round((32/720)*self.height))
         self.temperature = pygame.font.Font(fontDir+"Regular.ttf", round((110/720)*self.height))
         self.weather = pygame.font.Font(fontDir+"Regular.ttf", round((52/720)*self.height))
         self.smallweatherdata = pygame.font.Font(fontDir+"Regular.ttf", round((20/720)*self.height))
         self.forecast = self.subtitle
         self.statusFont = pygame.font.Font(fontDir+"Regular.ttf", round((13/720)*self.height))
+        self.timeFont = pygame.font.Font(fontDir+"Regular.ttf", round((41/720)*self.height))
     
 
     def renderAndBlit(self, text, font, surface, coords, color=WHITE, centre=True, anchor=(0, 0), mode=0):

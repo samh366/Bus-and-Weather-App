@@ -28,7 +28,7 @@ class App:
         
         self.weather = WeatherManager(self.screen, RES)
 
-        self.weather.setWeather("fog")
+        self.weather.setWeather("clear")
 
         self.debugWeatherCodes = ["sunny", "partly-sunny",
                                   "cloudy", "rain",
