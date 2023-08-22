@@ -125,7 +125,7 @@ class App:
         if "wind" in weather or "tornado" in weather:
             return pygame.image.load(join("icons", "wind.png"))
 
-        return pygame.image.load("icons\\cloudy.png")
+        return pygame.image.load(join("icons", "cloudy.png"))
     
 
     # Gets downscaled versions of the weather icons
