@@ -21,7 +21,7 @@ DISABLELIGHTNING = False
 ################################
 
 # Screen size
-RES = (1280, 800)
+RES = (1280, 720)
 WIDTH, HEIGHT = RES
 
 # Colours
@@ -38,7 +38,7 @@ TIMEOUT = 10
 
 class App:
     def __init__(self):
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
         self.clock = pygame.time.Clock()
 
         self.running = True
@@ -500,6 +500,8 @@ class App:
 
             # Blit status
             self.font.renderAndBlit(self.status, self.font.statusFont, self.screen, (WIDTH//2, HEIGHT*0.985))
+
+            # self.weather.setWeather("snow")
 
 
             pygame.display.flip()

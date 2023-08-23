@@ -6,8 +6,8 @@ import pygame
 def smartResize(surface, newSize, smooth=False):
     """Resizes an image while keeping aspect ratio"""
     size = surface.get_size()
-    x = abs(newSize[0] - size[0])
-    y = abs(newSize[1] - size[1])
+    x = abs(size[0] - newSize[0])
+    y = abs(size[1] - newSize[1])
 
     if x <= y:
         scale = newSize[0]/size[0]
@@ -21,6 +21,19 @@ def smartResize(surface, newSize, smooth=False):
         surface = pygame.transform.scale(surface, (round(finalSize[0]), round(finalSize[1])))
     
     return surface
+
+
+def getSmartScale(size, newSize):
+    """Computes the scale for the above function without interacting with any images"""
+
+    x = abs(size[0] - newSize[0])
+    y = abs(size[1] - newSize[1])
+
+    if x <= y:
+        scale = newSize[0]/size[0]
+    else:
+        scale = newSize[1]/size[1]
+    return (size[0]*scale, size[1]*scale)
 
 
 

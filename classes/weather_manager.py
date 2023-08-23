@@ -7,6 +7,7 @@ import pygame
 
 from classes.cloud import Cloud
 from classes.utils import smartResize
+from classes.utils import getSmartScale
 
 WHITE = (255, 255, 255)
 GREY = (175, 175, 175)
@@ -245,7 +246,7 @@ class WeatherManager:
             
             else:
                 # Random chance for flash
-                if random.randint(1, 30*30) == 69:
+                if random.randint(1, 30*15) == 69:
                     self.flash()
     
     
@@ -278,6 +279,10 @@ class WeatherManager:
         self.movingIndex += 1
         if self.movingIndex >= len(self.movingOverlay):
             self.movingIndex = 0
+        
+        if self.movingOverlay[self.movingIndex].get_size() != self.RES:
+            return pygame.transform.scale(self.movingOverlay[self.movingIndex], (round(self.overlayDimensions[0]), round(self.overlayDimensions[1])))
+        
         return self.movingOverlay[self.movingIndex]
     
 
@@ -290,10 +295,12 @@ class WeatherManager:
 
             for file in [f for f in os.listdir(folder) if os.path.isfile(join(folder, f))]:
                 img = pygame.image.load(join(folder, file)).convert()
-                img = smartResize(img, self.RES, True)
+                img = smartResize(img, (self.RES[0]//2, self.RES[1]//2), True)
                 img.blit(self.opacityLayer, (0, 0))
                 self.movingOverlay.append(img)
             
+            # Compute the value the overlay needs to be rescaled to, to prevent calculating this each frame
+            self.overlayDimensions = getSmartScale((self.RES[0]//2, self.RES[1]//2), self.RES)
             self.loadedOverlay = folder
             del self.opacityLayer
     
