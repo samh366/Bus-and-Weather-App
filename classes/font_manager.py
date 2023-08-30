@@ -34,8 +34,9 @@ class FontManager:
 
         if centre == True:
             coords = self.centreCoords(textSurface, coords, anchor)
-        
-        surface.blit(textSurface, coords, special_flags=mode)
+
+        # Return the portion of the screen that was updated and blit onto the surface
+        return surface.blit(textSurface, coords, special_flags=mode)
     
 
     

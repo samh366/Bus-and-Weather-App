@@ -17,13 +17,14 @@ DARKBLUE = (0, 15, 48)
 
 
 class WeatherManager:
-    def __init__(self, screen, RES, DISABLELIGHTNING=False):
+    def __init__(self, screen, RES, DISABLELIGHTNING=False, DISABLEANIMATIONS=False):
         """Generates weather based on the given conditions"""
         self.screen = screen
         self.activeWeather = self.mostlySunny
         self.loading = False
 
         self.DISABLELIGHTNING = DISABLELIGHTNING
+        self.DISABLEANIMATIONS = DISABLEANIMATIONS
         self.RES = RES
         self.WIDTH, self.HEIGHT = RES
 
@@ -33,8 +34,8 @@ class WeatherManager:
                 Cloud(join("weather", "clouds", "big_cloud.png"), 220, (500, 500), pos=(random.randint(-300, 400), random.randint(-30, 20)))
             ],
             "mostly sunny" : [
-                Cloud(join("weather", "clouds", "cloud3.png"), 220, (400, 400), pos=(random.randint(800, 1000), random.randint(-30, 20))),
-                Cloud(join("weather", "clouds", "cloud4.png"), 230, (300, 300), pos=(random.randint(-300, 400), random.randint(-30, 20)))
+                Cloud(join("weather", "clouds", "cloud3.png"), opacity=180, size=(400, 400), pos=(random.randint(800, 1000), random.randint(-30, 20))),
+                Cloud(join("weather", "clouds", "cloud4.png"), 180, (300, 300), pos=(random.randint(-300, 400), random.randint(-30, 20)))
             ],
             "mostly clear" : [
                 Cloud(join("weather", "clouds", "dark_cloud1.png"), 180, size=(400, 400), pos=(random.randint(800, 1000), random.randint(-30, 20))),
@@ -58,6 +59,7 @@ class WeatherManager:
         self.lensFlare = self.getImageWithOpacity(join("weather", "sunny", "lens flare.png"), opacity=150)
         self.stars = self.getImageWithOpacity(join("weather", "stars", "stars.png"), opacity=150)
         self.fogOverlay = self.getImageWithOpacity(join("weather", "fog", random.choice(["fog1.jpg", "fog2.jpg"])), opacity=100)
+        self.rainDrops = self.getImageWithOpacity(join("weather", "raindrops", "raindrops.jpg"), opacity=180, resize=True)
         
         # Position info for specific overlays
         self.starPos = 0
@@ -148,7 +150,8 @@ class WeatherManager:
         # Clouds
         for cloud in self.clouds["mostly clear"]:
             cloud.render(self.screen)
-            cloud.advance()
+            if not self.DISABLEANIMATIONS:
+                cloud.advance()
 
     
     # Clear
@@ -161,9 +164,10 @@ class WeatherManager:
         starSurface.blit(self.stars, (0, round(self.starPos)))
         starSurface.blit(self.stars, (0, round(self.starPos)-self.HEIGHT))
 
-        self.starPos += 0.25
-        if self.starPos > self.HEIGHT:
-            self.starPos = 0
+        if not self.DISABLEANIMATIONS:
+            self.starPos += 0.25
+            if self.starPos > self.HEIGHT:
+                self.starPos = 0
 
         # Add some gradient opacity 
         starSurface.blit(pygame.transform.flip(self.gradients["stars"], flip_x=False, flip_y=True), (0, 0))
@@ -184,7 +188,8 @@ class WeatherManager:
         #self.screen.blit(self.gradients["mostly-sunny"], (0, 0))
         for cloud in self.clouds["mostly sunny"]:
             cloud.render(self.screen)
-            cloud.advance()
+            if not self.DISABLEANIMATIONS:
+                cloud.advance()
         self.screen.blit(self.lensFlare, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
 
@@ -206,32 +211,38 @@ class WeatherManager:
         self.screen.blit(self.gradients["cloudy"], (0, 0))
         for cloud in self.clouds["cloudy"]:
             cloud.render(self.screen)
-            cloud.advance()
+            if not self.DISABLEANIMATIONS:
+                cloud.advance()
     
 
     # Rain
     def rain(self):
         self.screen.fill(BLUEGREY)
         self.screen.blit(self.gradients["rain"], (0, 0))
-        self.screen.blit(self.getMovingOverlay(), (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+        if not self.DISABLEANIMATIONS:
+            self.screen.blit(self.getMovingOverlay(), (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+        else:
+            self.screen.blit(self.rainDrops, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
     
     # Stormy
     def storm(self):
         self.screen.fill(BLUEGREY)
         
-        if self.flashing[0] and not self.DISABLELIGHTNING:
-            self.screen.blit(self.gradients["lightning"], (0, 0))
-        else:
-            self.screen.blit(self.gradients["rain"], (0, 0))
+        if not self.DISABLEANIMATIONS:
+            if self.flashing[0] and not self.DISABLELIGHTNING:
+                self.screen.blit(self.gradients["lightning"], (0, 0))
+            else:
+                self.screen.blit(self.gradients["rain"], (0, 0))
         
         self.screen.blit(self.getMovingOverlay(), (0, 0), special_flags=pygame.BLEND_RGB_ADD)
         for cloud in self.clouds["cloudy"]:
             cloud.render(self.screen)
-            cloud.advance()
+            if not self.DISABLEANIMATIONS:
+                cloud.advance()
 
         
-        if not self.DISABLELIGHTNING:
+        if not self.DISABLELIGHTNING and not self.DISABLEANIMATIONS:
             if self.currentFlash != [] or self.flashing[0] == True:
                 # Continue flash animation
                 self.flashing[1] -= 1
@@ -267,18 +278,18 @@ class WeatherManager:
         self.screen.blit(self.fogOverlay, (round(self.fogPos), 0), special_flags=pygame.BLEND_RGB_ADD)
         self.screen.blit(self.fogOverlay, (round(self.fogPos - self.fogOverlay.get_width()), 0), special_flags=pygame.BLEND_RGB_ADD)
 
-        self.fogPos += 0.5
-        if self.fogPos > self.WIDTH:
-            self.fogPos = 0
-
-
+        if not self.DISABLEANIMATIONS:
+            self.fogPos += 0.5
+            if self.fogPos > self.WIDTH:
+                self.fogPos = 0
 
 
     def getMovingOverlay(self):
         """Gets the next frame in the moving overlay"""
-        self.movingIndex += 1
-        if self.movingIndex >= len(self.movingOverlay):
-            self.movingIndex = 0
+        if not self.DISABLEANIMATIONS:
+            self.movingIndex += 1
+            if self.movingIndex >= len(self.movingOverlay):
+                self.movingIndex = 0
         
         if self.movingOverlay[self.movingIndex].get_size() != self.RES:
             return pygame.transform.scale(self.movingOverlay[self.movingIndex], (round(self.overlayDimensions[0]), round(self.overlayDimensions[1])))
@@ -298,13 +309,16 @@ class WeatherManager:
                 img = smartResize(img, (self.RES[0]//2, self.RES[1]//2), True)
                 img.blit(self.opacityLayer, (0, 0))
                 self.movingOverlay.append(img)
+
+                if self.DISABLEANIMATIONS:
+                    # Only load the first frame to save memory
+                    break
             
             # Compute the value the overlay needs to be rescaled to, to prevent calculating this each frame
             self.overlayDimensions = getSmartScale((self.RES[0]//2, self.RES[1]//2), self.RES)
             self.loadedOverlay = folder
             del self.opacityLayer
     
-
 
     def generateGradient(self, dimensions, color, startOP, endOP, duration):
         """Generates a surface with a colour gradually fading in/out vertically"""

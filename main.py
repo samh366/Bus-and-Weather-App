@@ -19,9 +19,10 @@ from classes.weather_manager import WeatherManager
 ### DISABLES FLASHING IMAGES ###
 DISABLELIGHTNING = False
 ################################
+DISABLEANIMATIONS = False
 
 # Screen size
-RES = (1280, 720)
+RES = (1280, 800)
 WIDTH, HEIGHT = RES
 
 # Colours
@@ -38,7 +39,7 @@ TIMEOUT = 10
 
 class App:
     def __init__(self):
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
 
         self.running = True
@@ -94,7 +95,7 @@ class App:
                                   "clear", "mostly-clear"]
         
         # Weather manager
-        self.weather = WeatherManager(self.screen, RES, DISABLELIGHTNING)
+        self.weather = WeatherManager(self.screen, RES, DISABLELIGHTNING, DISABLEANIMATIONS)
 
         # Static gui
         self.staticGUI = self.generateStaticGui()
@@ -102,6 +103,8 @@ class App:
         # Non-static gui
         self.nonStaticGUI = self.generateNonStaticGui()
         self.updateNonStaticGUI = False
+
+        self.timeText = ""
 
 
     
@@ -124,6 +127,8 @@ class App:
             return pygame.image.load(join("icons", "snow.png"))
         if "wind" in weather or "tornado" in weather:
             return pygame.image.load(join("icons", "wind.png"))
+        if weather == "partly-cloudy" or "fair":
+            return pygame.image.load(join("icons", "mostly-sunny.png"))
 
         return pygame.image.load(join("icons", "cloudy.png"))
     
@@ -140,6 +145,7 @@ class App:
         
         return minis
     
+
     def translateWMOCode(self, code):
         """Translates a WMO weather code into a file icon name"""
         if code == 0:
@@ -415,11 +421,10 @@ class App:
                 self.apiData["weekly"]["data"] = formatted
 
                 self.updateNonStaticGUI = True
-                print(formatted)
 
             
             else:
-                print("Something fucked up")
+                print("Something went wrong!")
                 print(response.status_code)
                 print(response.content)
 
@@ -460,6 +465,7 @@ class App:
 
     def main(self):
         while self.running:
+            screenUpdate = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -467,16 +473,23 @@ class App:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
+                    
+                    if event.key == pygame.K_F11:
+                        pygame.display.toggle_fullscreen()
+                        screenUpdate = True
 
                     # Good for debugging
                     if event.key == pygame.K_SPACE:
                         self.weather.randomise()
+                        screenUpdate = True
                     
                     if event.key == pygame.K_r:
                         self.weather.setWeather(self.apiData["daily"]["data"]["weather"].lower().replace(" ", "-"))
+                        screenUpdate = True
 
                     if event.key == pygame.K_RETURN:
                         self.apiData["bus"]["mostRecentRequest"] = None
+                        screenUpdate = True
 
             # Check data
             if not self.requesting:
@@ -491,21 +504,30 @@ class App:
             if self.updateNonStaticGUI == True:
                 self.nonStaticGUI = self.generateNonStaticGui()
                 self.updateNonStaticGUI = False
+                screenUpdate = True
 
             self.screen.blit(self.nonStaticGUI, (0, 0))
 
-            # Update time
-            time = datetime.now().strftime("%I:%M %p").lstrip("0")
-            self.font.renderAndBlit(time, self.font.timeFont, self.screen, (5*(WIDTH//6), (243/720)*HEIGHT))
+            # Update time when it changes
+            timeCheck = datetime.now().strftime("%I:%M %p").lstrip("0")
+            if timeCheck != self.timeText:
+                self.timeText = timeCheck
+                screenUpdate = True
+            
+            self.font.renderAndBlit(self.timeText, self.font.timeFont, self.screen, (5*(WIDTH//6), (243/720)*HEIGHT))
 
             # Blit status
             self.font.renderAndBlit(self.status, self.font.statusFont, self.screen, (WIDTH//2, HEIGHT*0.985))
 
-            # self.weather.setWeather("snow")
-
-
-            pygame.display.flip()
-            self.clock.tick(30)
+            # Run in super low CPU useage mode with animations off
+            if DISABLEANIMATIONS:
+                if screenUpdate == True:
+                    pygame.display.update()
+                self.clock.tick(5)
+            
+            else:
+                pygame.display.update()
+                self.clock.tick(25)
 
 
 
