@@ -22,7 +22,7 @@ DISABLELIGHTNING = False
 DISABLEANIMATIONS = False
 
 # Screen size
-RES = (1280, 800)
+RES = (1280, 720)
 WIDTH, HEIGHT = RES
 
 # Colours
@@ -32,6 +32,9 @@ BLUE = (72, 166, 207)
 
 # Requests timeout
 TIMEOUT = 10
+
+# Start in fullscreen
+FULLSCREEN = False
 
 # Rain credit
 # 4kmotionworld
@@ -45,6 +48,9 @@ class App:
         self.running = True
         self.requesting = False
         self.status = ""
+
+        if FULLSCREEN == True:
+            pygame.display.toggle_fullscreen()
 
 
         # Loads ATCO codes to request data from
@@ -346,6 +352,10 @@ class App:
             # Get temperature and weather code
             daily["temperature"] = soup.find("span", {"data-testid" : "TemperatureValue"}).text
             daily["weather"] = soup.find("div", {"data-testid" : "wxPhrase"}).text
+
+            # Filter certain weather
+            if "shower" in daily["weather"]:
+                daily["weather"] = "Showers"
 
             # Wind speed
             windSpeed = soup.find("span", {"data-testid" : "Wind"})
